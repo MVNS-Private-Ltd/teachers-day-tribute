@@ -26,20 +26,22 @@ function makePageGeometry(width, height, curl, segments = 28) {
   return geo
 }
 
-function makeWoodTexture(baseHex) {
+function makeWoodTexture(baseHex, isMobile) {
+  const size = isMobile ? 128 : 256
   const canvas = document.createElement('canvas')
-  canvas.width = 256
-  canvas.height = 256
+  canvas.width = size
+  canvas.height = size
   const ctx = canvas.getContext('2d')
   ctx.fillStyle = baseHex
-  ctx.fillRect(0, 0, 256, 256)
-  for (let i = 0; i < 90; i++) {
-    const y = Math.random() * 256
+  ctx.fillRect(0, 0, size, size)
+  const lineCount = isMobile ? 40 : 90
+  for (let i = 0; i < lineCount; i++) {
+    const y = Math.random() * size
     ctx.strokeStyle = `rgba(0,0,0,${0.03 + Math.random() * 0.06})`
     ctx.lineWidth = 0.6 + Math.random() * 1.6
     ctx.beginPath()
     ctx.moveTo(0, y)
-    for (let x = 0; x <= 256; x += 16) {
+    for (let x = 0; x <= size; x += 16) {
       ctx.lineTo(x, y + Math.sin(x * 0.05 + i) * 4)
     }
     ctx.stroke()
@@ -81,30 +83,34 @@ function renderHighlighted(text, highlights) {
   )
 }
 
-function makePageTexture(text, highlights, colorHex) {
+function makePageTexture(text, highlights, colorHex, isMobile) {
   const canvas = document.createElement('canvas')
-  // Using an aspect ratio that matches the page geometry (1.15w x 1.5h)
-  canvas.width = 1024
-  canvas.height = 1336
+  // On mobile use half-size canvas to save memory and GPU upload time
+  const cw = isMobile ? 512 : 1024
+  const ch = isMobile ? 668 : 1336
+  canvas.width = cw
+  canvas.height = ch
   const ctx = canvas.getContext('2d')
   
   ctx.fillStyle = colorHex
-  ctx.fillRect(0, 0, 1024, 1336)
+  ctx.fillRect(0, 0, cw, ch)
 
   ctx.fillStyle = '#2b2013'
   ctx.textBaseline = 'middle'
   ctx.textAlign = 'left'
   
+  const fontSize = isMobile ? 36 : 56
+  const maxWidth = isMobile ? 420 : 800
+
   const words = text.split(' ')
   const lines = []
   let currentLine = []
   let currentWidth = 0
-  const maxWidth = 800
 
   words.forEach(w => {
     const clean = w.replace(/[^a-zA-Z0-9]/g, '')
     const isHigh = highlights && highlights.some(h => h.toLowerCase() === clean.toLowerCase())
-    ctx.font = isHigh ? 'italic bold 56px "Instrument Serif", serif' : 'italic 56px "Instrument Serif", serif'
+    ctx.font = isHigh ? `italic bold ${fontSize}px "Instrument Serif", serif` : `italic ${fontSize}px "Instrument Serif", serif`
     const metric = ctx.measureText(w + ' ')
     if (currentWidth + metric.width > maxWidth && currentLine.length > 0) {
       lines.push({ words: currentLine, width: currentWidth })
@@ -119,17 +125,17 @@ function makePageTexture(text, highlights, colorHex) {
     lines.push({ words: currentLine, width: currentWidth })
   }
 
-  const lineHeight = 76
+  const lineHeight = isMobile ? 50 : 76
   const totalHeight = lines.length * lineHeight
-  let startY = 1336 / 2 - totalHeight / 2 + lineHeight / 2
+  let startY = ch / 2 - totalHeight / 2 + lineHeight / 2
 
   lines.forEach(line => {
-    let currentX = 1024 / 2 - line.width / 2
+    let currentX = cw / 2 - line.width / 2
     line.words.forEach(pw => {
-      ctx.font = pw.isHigh ? 'italic bold 56px "Instrument Serif", serif' : 'italic 56px "Instrument Serif", serif'
+      ctx.font = pw.isHigh ? `italic bold ${fontSize}px "Instrument Serif", serif` : `italic ${fontSize}px "Instrument Serif", serif`
       ctx.fillText(pw.text, currentX, startY)
       if (pw.isHigh) {
-        ctx.fillRect(currentX, startY + 28, pw.width - ctx.measureText(' ').width, 3)
+        ctx.fillRect(currentX, startY + fontSize * 0.5, pw.width - ctx.measureText(' ').width, 2)
       }
       currentX += pw.width
     })
@@ -137,7 +143,7 @@ function makePageTexture(text, highlights, colorHex) {
   })
 
   const tex = new THREE.CanvasTexture(canvas)
-  tex.anisotropy = 4
+  tex.anisotropy = isMobile ? 1 : 4
   tex.colorSpace = THREE.SRGBColorSpace
   return tex
 }
@@ -156,15 +162,18 @@ export default function ScrollBook({ teacher }) {
     const section = sectionRef.current
     if (!mount || !section) return
 
+    // Detect mobile for performance scaling
+    const isMobile = window.innerWidth < 768 || navigator.maxTouchPoints > 0
+
     const width = mount.clientWidth
     const height = mount.clientHeight
 
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100)
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, alpha: true })
     renderer.setSize(width, height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 2))
     mount.appendChild(renderer.domElement)
 
     // --- lighting ---------------------------------------------------------
@@ -185,7 +194,7 @@ export default function ScrollBook({ teacher }) {
     scene.add(glow)
 
     // --- table / stage --------------------------------------------------
-    const woodTex = makeWoodTexture('#3b2417')
+    const woodTex = makeWoodTexture('#3b2417', isMobile)
     const table = new THREE.Mesh(
       new THREE.CircleGeometry(2.6, 48),
       new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.85, metalness: 0.05, transparent: true, opacity: 0.9 })
@@ -235,13 +244,15 @@ export default function ScrollBook({ teacher }) {
     // Base material for the left page and back sides
     const leftPageMat = new THREE.MeshStandardMaterial({ color: pageColor, roughness: 0.92, side: THREE.DoubleSide, transparent: true, opacity: 0 })
     
-    // Texture material for the right page front
-    const pageTex = makePageTexture(teacher.bookLine || '', teacher.bookHighlights || [], '#f4efe3')
+    // Texture material for the right page front — font size scales for mobile
+    const pageTex = makePageTexture(teacher.bookLine || '', teacher.bookHighlights || [], '#f4efe3', isMobile)
     const rightPageMat = new THREE.MeshStandardMaterial({ map: pageTex, roughness: 0.92, side: THREE.DoubleSide, transparent: true, opacity: 0 })
 
     const rightPivot = new THREE.Group()
     rightPivot.position.set(0, 0.07, 0)
-    const rightPageGeo = makePageGeometry(pageW, pageH, 0.16)
+    // Fewer segments on mobile = less geometry to process per frame
+    const pageSegments = isMobile ? 10 : 28
+    const rightPageGeo = makePageGeometry(pageW, pageH, 0.16, pageSegments)
     const rightPage = new THREE.Mesh(rightPageGeo, rightPageMat)
     rightPivot.add(rightPage)
     openGroup.add(rightPivot)
@@ -249,7 +260,7 @@ export default function ScrollBook({ teacher }) {
     const leftPivot = new THREE.Group()
     leftPivot.position.set(0, 0.07, 0)
     leftPivot.scale.x = -1
-    const leftPageGeo = makePageGeometry(pageW, pageH, 0.16)
+    const leftPageGeo = makePageGeometry(pageW, pageH, 0.16, pageSegments)
     const leftPage = new THREE.Mesh(leftPageGeo, leftPageMat)
     leftPivot.add(leftPage)
     openGroup.add(leftPivot)

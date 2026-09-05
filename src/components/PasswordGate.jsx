@@ -40,6 +40,7 @@ export default function PasswordGate({ onUnlock }) {
               if (error) setError(false)
             }}
             placeholder="Enter your password"
+            style={{ fontSize: '16px' }}
             className="w-full rounded-full border border-white/15 bg-white/5 px-5 py-3 text-center text-white placeholder-white/30 outline-none backdrop-blur-sm transition focus:border-purple-300/50 focus:bg-white/10"
           />
           {error && (
@@ -51,7 +52,7 @@ export default function PasswordGate({ onUnlock }) {
 
         <button
           type="submit"
-          className="rounded-full bg-white/10 px-8 py-2.5 text-sm text-white/90 backdrop-blur-sm transition hover:bg-white/20"
+          className="rounded-full bg-white/10 px-8 py-3 text-sm text-white/90 backdrop-blur-sm transition hover:bg-white/20 active:scale-95"
         >
           Enter
         </button>

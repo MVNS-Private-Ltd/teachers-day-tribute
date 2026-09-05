@@ -49,7 +49,7 @@ export default function TeacherPage({ teacher, onExit }) {
             }}
           />
 
-          <div className="relative z-10 flex h-full w-full flex-col items-center justify-center px-6 text-center">
+          <div className="relative z-10 flex h-full w-full flex-col items-center justify-center px-5 text-center overflow-y-auto py-20">
             {!showMessage && (
               <div className="max-w-2xl">
                 <h1
@@ -69,7 +69,7 @@ export default function TeacherPage({ teacher, onExit }) {
             )}
 
             {showMessage && (
-              <div className="max-w-xl animate-[fadeUp_1.1s_ease_forwards]">
+              <div className="max-w-xl w-full animate-[fadeUp_1.1s_ease_forwards] px-1">
                 <p
                   className="text-[11px] uppercase tracking-[0.3em]"
                   style={{ color: accent }}
@@ -77,21 +77,21 @@ export default function TeacherPage({ teacher, onExit }) {
                   {teacher.subject}
                 </p>
                 <p
-                  className="mt-6 text-[clamp(1.05rem,2.3vw,1.4rem)] leading-relaxed text-white/85"
+                  className="mt-5 text-[clamp(0.95rem,2.3vw,1.4rem)] leading-relaxed text-white/85"
                   style={{ fontFamily: "'Instrument Serif', serif" }}
                 >
                   {teacher.message}
                 </p>
-                <p className="mt-8 text-sm text-white/50">— With gratitude, your students</p>
+                <p className="mt-6 text-sm text-white/50">— With gratitude, your students</p>
                 <div
-                  className="mx-auto mt-10 h-px w-16"
+                  className="mx-auto mt-8 h-px w-16"
                   style={{ backgroundColor: accentSoft }}
                 />
 
-                <div className="mt-16 animate-[fadeUp_1.1s_ease_forwards]" style={{ animationDelay: '0.8s', animationFillMode: 'both' }}>
+                <div className="mt-10 pb-4 animate-[fadeUp_1.1s_ease_forwards]" style={{ animationDelay: '0.8s', animationFillMode: 'both' }}>
                   <button
                     onClick={() => setSlideIndex(1)}
-                    className="rounded-full border border-white/20 bg-white/5 px-8 py-3 text-sm tracking-wider text-white backdrop-blur transition hover:bg-white/10 hover:border-white/40"
+                    className="rounded-full border border-white/20 bg-white/5 px-8 py-3 text-sm tracking-wider text-white backdrop-blur transition hover:bg-white/10 hover:border-white/40 active:scale-95"
                   >
                     Next
                   </button>

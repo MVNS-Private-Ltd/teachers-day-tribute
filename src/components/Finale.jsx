@@ -16,8 +16,7 @@ function makeSparkTexture() {
   return new THREE.CanvasTexture(canvas)
 }
 
-function spawnBurst(scene, palette, sparkTexture) {
-  const count = 130 + Math.floor(Math.random() * 40)
+function spawnBurst(scene, palette, sparkTexture, count = 130) {
   const geometry = new THREE.BufferGeometry()
   const positions = new Float32Array(count * 3)
   const velocities = new Float32Array(count * 3)
@@ -117,20 +116,25 @@ export default function Finale({ teacher }) {
     const width = mount.clientWidth
     const height = mount.clientHeight
 
+    // Detect mobile for reduced particle count and pixel ratio
+    const isMobile = window.innerWidth < 768 || navigator.maxTouchPoints > 0
+
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 50)
     camera.position.set(0, 1.5, 6)
     camera.lookAt(0, 1.3, 0)
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, alpha: true })
     renderer.setSize(width, height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 2))
     mount.appendChild(renderer.domElement)
 
     const sparkTexture = makeSparkTexture()
     const palette = [particle, particleAlt, accent, '#ffe9a8', '#ffffff']
 
     let bursts = []
+    // Spawn less frequently and with fewer particles on mobile
+    const spawnInterval = isMobile ? 0.9 : 0.55
     let spawnTimer = 0
     let lastTime = performance.now()
     let rafId
@@ -142,8 +146,10 @@ export default function Finale({ teacher }) {
       if (activeRef.current) {
         spawnTimer -= dt
         if (spawnTimer <= 0) {
-          bursts.push(spawnBurst(scene, palette, sparkTexture))
-          spawnTimer = 0.55 + Math.random() * 0.7
+          // Fewer particles per burst on mobile to keep frame rate up
+          const burstCount = isMobile ? 70 : (130 + Math.floor(Math.random() * 40))
+          bursts.push(spawnBurst(scene, palette, sparkTexture, burstCount))
+          spawnTimer = spawnInterval + Math.random() * 0.7
         }
       }
 

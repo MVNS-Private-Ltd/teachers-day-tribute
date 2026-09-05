@@ -14,6 +14,9 @@ export default function ParticleNet({ colorA = '#a78bfa', colorB = '#f472b6', bg
     const mount = mountRef.current
     if (!mount) return
 
+    // Detect mobile/low-power devices for performance scaling
+    const isMobile = window.innerWidth < 768 || navigator.maxTouchPoints > 0
+
     const width = mount.clientWidth
     const height = mount.clientHeight
 
@@ -24,14 +27,17 @@ export default function ParticleNet({ colorA = '#a78bfa', colorB = '#f472b6', bg
     camera.position.set(0, 3.4, 7.5)
     camera.lookAt(0, -0.6, -6)
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    // Disable antialiasing on mobile to save GPU fill-rate
+    const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, alpha: true })
     renderer.setSize(width, height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    // Cap pixel ratio to 1 on mobile — biggest single performance win
+    renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 2))
     mount.appendChild(renderer.domElement)
 
     // --- build the point grid -------------------------------------------------
-    const cols = 110
-    const rows = 64
+    // Fewer particles on mobile: ~1260 vs ~7040 on desktop
+    const cols = isMobile ? 45 : 110
+    const rows = isMobile ? 28 : 64
     const spacing = 0.16
     const count = cols * rows
 

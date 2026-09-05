@@ -1,19 +1,49 @@
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
+}
+
+html {
+  /* Use dynamic viewport height so content fills screen correctly on mobile
+     browsers where the address bar appears/disappears */
+  height: -webkit-fill-available;
 }
 
 html, body, #root {
   margin: 0;
   padding: 0;
   min-height: 100%;
+  min-height: 100dvh;
   background-color: #0b0714;
+  /* Prevent horizontal overflow on mobile */
+  overflow-x: hidden;
+  width: 100%;
 }
 
 body {
   font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  /* Prevent elastic bounce scrolling from revealing background on iOS */
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Prevent iOS from zooming in on input focus (font-size must be >= 16px) */
+input, textarea, select {
+  font-size: 16px;
+}
+
+/* Make tap targets feel snappy on mobile */
+button, a {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Full-screen sections should use dvh on modern mobile browsers */
+.h-screen {
+  height: 100vh;
+  height: 100dvh;
 }
 
 @keyframes fadeUp {
