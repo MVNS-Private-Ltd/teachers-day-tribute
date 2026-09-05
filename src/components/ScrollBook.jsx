@@ -127,7 +127,9 @@ function makePageTexture(text, highlights, colorHex, isMobile) {
 
   const lineHeight = isMobile ? 50 : 76
   const totalHeight = lines.length * lineHeight
-  let startY = ch / 2 - totalHeight / 2 + lineHeight / 2
+  // Shift the text vertically higher on the physical page so it appears centered 
+  // taking into account the page curl and 3D camera perspective
+  let startY = ch * 0.38 - totalHeight / 2 + lineHeight / 2
 
   lines.forEach(line => {
     let currentX = cw / 2 - line.width / 2
@@ -387,11 +389,12 @@ export default function ScrollBook({ teacher }) {
       const orbitR = 3.4
       const orbitAngle = t * 0.12
       const camClosed = new THREE.Vector3(Math.sin(orbitAngle) * orbitR, 1.6, Math.cos(orbitAngle) * orbitR)
-      const camOpen = new THREE.Vector3(0, 2.5, 2.6)
+      const camOpen = new THREE.Vector3(0, 2.5, 2.7) // slight tweak to pull back
       const camT = smoothstep(0.08, 0.5, smoothed)
       camera.position.lerpVectors(camClosed, camOpen, camT)
       const lookClosed = new THREE.Vector3(0, 0.5, 0)
-      const lookOpen = new THREE.Vector3(0, 0.05, -0.1)
+      // Look slightly "down" the page (positive z, negative y) to push the book UP on the screen
+      const lookOpen = new THREE.Vector3(0, -0.25, 0.35)
       const look = lookClosed.lerp(lookOpen, camT)
       camera.lookAt(look)
 
