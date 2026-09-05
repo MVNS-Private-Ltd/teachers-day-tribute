@@ -22,6 +22,8 @@ function makePageGeometry(width, height, curl, segments = 28) {
     const lift = Math.sin(t * (Math.PI / 2)) * curl
     pos.setZ(i, pos.getZ(i) + lift)
   }
+  // Rotate the geometry so it lies flat on the table (XZ plane) instead of standing vertically (XY plane).
+  geo.rotateX(-Math.PI / 2)
   geo.computeVertexNormals()
   return geo
 }
@@ -376,8 +378,9 @@ export default function ScrollBook({ teacher }) {
 
       const spread = smoothstep(0.16, 0.55, smoothed)
       const pivotAngle = lerp(1.35, 0.06, spread)
-      rightPivot.rotation.z = -pivotAngle
-      leftPivot.rotation.z = -pivotAngle
+      // Positive rotation lifts the pages up off the table
+      rightPivot.rotation.z = pivotAngle
+      leftPivot.rotation.z = pivotAngle
 
       // gentle idle breathing once open
       const breathe = openAmount > 0.9 ? Math.sin(t * 0.6) * 0.01 : 0
