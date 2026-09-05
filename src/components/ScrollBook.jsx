@@ -149,9 +149,11 @@ function makePageTexture(text, highlights, colorHex, isMobile) {
 }
 
 export default function ScrollBook({ teacher }) {
-  const sectionRef = useRef(null)
   const mountRef = useRef(null)
+  const containerRef = useRef(null)
   const hintRef = useRef(null)
+  // Tracks the target animation progress (0-1) driven by wheel/touch
+  const progressRef = useRef(0)
   const { playThud, playPageFlip, playChime } = useSoundFx()
 
   const { accent, bg, kind } = teacher.theme
@@ -159,8 +161,8 @@ export default function ScrollBook({ teacher }) {
 
   useEffect(() => {
     const mount = mountRef.current
-    const section = sectionRef.current
-    if (!mount || !section) return
+    const container = containerRef.current
+    if (!mount || !container) return
 
     // Detect mobile for performance scaling
     const isMobile = window.innerWidth < 768 || navigator.maxTouchPoints > 0
@@ -283,7 +285,33 @@ export default function ScrollBook({ teacher }) {
     }
     window.addEventListener('resize', handleResize)
 
-    // --- scroll-driven animation loop --------------------------------------
+    // --- Wheel + touch events drive animation progress -------------------
+    // Progress goes from 0 (closed book) to 1 (fully open with text)
+    // Wheel: accumulate delta, normalised by a sensitivity factor
+    const handleWheel = (e) => {
+      e.preventDefault()
+      // deltaY is in pixels (most mice) or lines. Normalise to ~0.0015 per pixel.
+      progressRef.current = clamp(progressRef.current + e.deltaY * 0.0015, 0, 1)
+    }
+
+    // Touch: track delta between touchmove events
+    let touchStartY = 0
+    const handleTouchStart = (e) => {
+      touchStartY = e.touches[0].clientY
+    }
+    const handleTouchMove = (e) => {
+      e.preventDefault()
+      const dy = touchStartY - e.touches[0].clientY
+      // More sensitive on mobile since swipe range is smaller
+      progressRef.current = clamp(progressRef.current + dy * 0.004, 0, 1)
+      touchStartY = e.touches[0].clientY
+    }
+
+    container.addEventListener('wheel', handleWheel, { passive: false })
+    container.addEventListener('touchstart', handleTouchStart, { passive: true })
+    container.addEventListener('touchmove', handleTouchMove, { passive: false })
+
+    // --- Animation loop (now driven by progressRef) ----------------------
     const clock = new THREE.Clock()
     let smoothed = 0
     const played = { thud: false, flip1: false, flip2: false, chime: false }
@@ -292,11 +320,10 @@ export default function ScrollBook({ teacher }) {
     const animate = () => {
       const t = clock.getElapsedTime()
 
-      const rect = section.getBoundingClientRect()
-      const vh = window.innerHeight
-      const total = rect.height - vh
-      const raw = total > 0 ? clamp(-rect.top / total, 0, 1) : 0
-      smoothed = lerp(smoothed, raw, 0.09)
+      // Read the latest progress value set by wheel/touch handlers
+      const raw = progressRef.current
+      // Smooth it for buttery animation
+      smoothed = lerp(smoothed, raw, 0.06)
 
       // sound + reveal thresholds (use raw progress so they fire predictably)
       if (raw > 0.16 && !played.thud) {
@@ -382,6 +409,9 @@ export default function ScrollBook({ teacher }) {
     return () => {
       cancelAnimationFrame(rafId)
       window.removeEventListener('resize', handleResize)
+      container.removeEventListener('wheel', handleWheel)
+      container.removeEventListener('touchstart', handleTouchStart)
+      container.removeEventListener('touchmove', handleTouchMove)
       ;[cover, pagesEdge, spine, base, rightPage, leftPage, crease, table].forEach((m) => m.geometry?.dispose())
       ;[coverMat, pagesEdgeMat, spineMat, baseMat, leftPageMat, rightPageMat, creaseMat].forEach((m) => m.dispose())
       woodTex.dispose()
@@ -396,18 +426,21 @@ export default function ScrollBook({ teacher }) {
   }, [accent])
 
   return (
-    <section ref={sectionRef} className="relative w-full" style={{ height: '260vh', ...bgStyle }}>
-      <div className="sticky top-0 h-screen w-full overflow-hidden">
-        <div ref={mountRef} className="absolute inset-0" aria-hidden="true" />
+    // Single h-screen container — no page scroll, events captured here
+    <div
+      ref={containerRef}
+      className="relative h-screen w-full overflow-hidden select-none"
+      style={bgStyle}
+    >
+      <div ref={mountRef} className="absolute inset-0" aria-hidden="true" />
 
-        <div
-          ref={hintRef}
-          className="pointer-events-none absolute bottom-10 left-1/2 -translate-x-1/2 text-center text-[10px] uppercase tracking-[0.3em] text-white/50 bg-black/30 px-4 py-2 rounded-full backdrop-blur"
-        >
-          <div className="mb-1 animate-bounce text-sm">↓</div>
-          scroll to see the animation
-        </div>
+      <div
+        ref={hintRef}
+        className="pointer-events-none absolute bottom-10 left-1/2 -translate-x-1/2 text-center text-[10px] uppercase tracking-[0.3em] text-white/50 bg-black/30 px-4 py-2 rounded-full backdrop-blur"
+      >
+        <div className="mb-1 animate-bounce text-sm">↓</div>
+        scroll to see the animation
       </div>
-    </section>
+    </div>
   )
 }

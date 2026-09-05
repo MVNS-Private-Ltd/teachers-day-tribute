@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ParticleNet from './ParticleNet'
 import ScrollBook from './ScrollBook'
 import Finale from './Finale'
@@ -15,6 +15,17 @@ export default function TeacherPage({ teacher, onExit }) {
   )
 
   const { lines, done } = useTypewriter(introLines, { speed: 42, lineDelay: 550, startDelay: 400 })
+
+  // Lock page scroll when on the book animation slide so the wheel events
+  // are consumed by ScrollBook's own handler rather than scrolling the page
+  useEffect(() => {
+    if (slideIndex === 1) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [slideIndex])
 
   // once the intro has finished typing, give it a beat, then reveal the message
   useMemo(() => {
